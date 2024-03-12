@@ -33,7 +33,7 @@ export const LoginForm = () => {
       <label htmlFor="email">Correo electrónico</label>
       <input
         className="px-5 py-2 border bg-gray-200 rounded mb-5"
-        type="email"
+        type="text"
         name="email"
       />
 

@@ -1,20 +1,20 @@
-import NextAuth, { type NextAuthConfig } from 'next-auth';
-import Credentials from 'next-auth/providers/credentials';
-import bcryptjs from 'bcryptjs';
-import { z } from 'zod';
-
-import prisma from './lib/prisma';
-
-
+import NextAuth, { type NextAuthConfig } from "next-auth";
+import Credentials from "next-auth/providers/credentials";
+import bcryptjs from "bcryptjs";
+import { z } from "zod";
+import axios from "axios";
+const api = axios.create({
+  baseURL: "http://localhost:3100",
+});
+import prisma from "./lib/prisma";
 
 export const authConfig: NextAuthConfig = {
   pages: {
-    signIn: '/auth/login',
-    newUser: '/auth/new-account',
+    signIn: "/auth/login",
+    newUser: "/auth/new-account",
   },
 
   callbacks: {
-
     authorized({ auth, request: { nextUrl } }) {
       console.log({ auth });
       // const isLoggedIn = !!auth?.user;
@@ -30,7 +30,7 @@ export const authConfig: NextAuthConfig = {
     },
 
     jwt({ token, user }) {
-      if ( user ) {
+      if (user) {
         token.data = user;
       }
 
@@ -41,47 +41,52 @@ export const authConfig: NextAuthConfig = {
       session.user = token.data as any;
       return session;
     },
-
-
-
   },
 
-
-
   providers: [
-
     Credentials({
       async authorize(credentials) {
+        console.log("parte 1" +JSON.stringify( credentials));
 
-        const parsedCredentials = z
-          .object({ email: z.string().email(), password: z.string().min(6) })
-          .safeParse(credentials);
+        const parsedCredentials = z.object({ email: z.string(), password: z.string() }).safeParse(credentials);
+        console.log("parte 2" + JSON.stringify(parsedCredentials));
 
+        if (!parsedCredentials.success) return null;
 
-          if ( !parsedCredentials.success ) return null;
+        const { email, password } = parsedCredentials.data;
+        console.log("parte 2" + email, password);
 
-          const { email, password } = parsedCredentials.data;
+        // Buscar el correo
 
+        const getbuscarUsuario = async () => {
+          const response = await api.get(
+            `/auth/buscarUsuario?pUsuario=${email}`
+          );
+          return response.data.Query3;
+        };
 
-          // Buscar el correo
-          const user = await prisma.user.findUnique({ where: { email: email.toLowerCase() } });
-          if ( !user ) return null;
+        console.log("parte 3" + getbuscarUsuario);
 
-          // Comparar las contraseñas
-          if( !bcryptjs.compareSync( password, user.password ) ) return null;
+        const user = await getbuscarUsuario();
 
+        console.log("parte 4" + JSON.stringify(user));
 
-          // Regresar el usuario sin el password
-          const { password: _, ...rest } = user;
+        if (!user) return null;
+        console.log("parte 5" + user);
+        
+        console.log("parte 6" + ''+ password+''+user.Contrasena);
 
-          return rest;
+        // Comparar las contraseñas
+        if (!bcryptjs.compareSync(password, user.Contrasena)) return null;
+        console.log("parte 7" );
+
+        // Regresar el usuario sin el password
+        const { password: _, ...rest } = user;
+
+        return rest;
       },
     }),
+  ],
+};
 
-
-  ]
-}
-
-
-
-export const {  signIn, signOut, auth, handlers } = NextAuth( authConfig );
+export const { signIn, signOut, auth, handlers } = NextAuth(authConfig);

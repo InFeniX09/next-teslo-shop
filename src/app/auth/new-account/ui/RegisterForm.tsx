@@ -34,7 +34,6 @@ export const RegisterForm = () => {
     }
 
     await login( email.toLowerCase(), password );
-    window.location.replace('/');
 
 
   }
